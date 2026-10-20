@@ -68,16 +68,16 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ================== الإعدادات (عدّلها) ================== */
 const firebaseConfig = {
-  apiKey: "ضع_هنا",
-  authDomain: "ضع_هنا",
-  projectId: "ضع_هنا",
-  storageBucket: "ضع_هنا",
-  messagingSenderId: "ضع_هنا",
-  appId: "ضع_هنا"
+  apiKey: "AIzaSyAvnirj7TYlefFcEMTI5n-4W29ZlFu8nMQ",
+  authDomain: "yanbu-coffee.firebaseapp.com",
+  projectId: "yanbu-coffee",
+  storageBucket: "yanbu-coffee.firebasestorage.app",
+  messagingSenderId: "492676625143",
+  appId: "1:492676625143:web:eac147af4db7d1caa959f2"
 };
 const BRAND_NAME = "اختصاص القهوة";   // اسم المقهى أعلى الصفحة
 const VALID_DAYS = 7;                 // صلاحية الجائزة بالأيام
@@ -96,7 +96,7 @@ const SLICES = ["خصم 10%","حظ أوفر","خصم 15%","خصم 10%","فاتو
 /* ======================================================= */
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
 const params = new URLSearchParams(location.search);
 const branch = (params.get("b") || DEFAULT_BRANCH).toLowerCase().replace(/[^a-z0-9-]/g,"").slice(0,20) || DEFAULT_BRANCH;
@@ -117,11 +117,12 @@ function drawWheel(){
     ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+seg); ctx.closePath();
     ctx.fillStyle = SLICES[i]==="فاتورة مجانية" ? "#e0a84a" : colors[i%4];
     ctx.fill(); ctx.strokeStyle="#2a1c14"; ctx.lineWidth=4; ctx.stroke();
-    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+seg/2);
-    ctx.textAlign="right"; ctx.textBaseline="middle";
+    const mid = start+seg/2, flip = Math.cos(mid) < 0;
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(flip ? mid+Math.PI : mid);
+    ctx.textAlign = flip ? "left" : "right"; ctx.textBaseline="middle";
     ctx.fillStyle = SLICES[i]==="فاتورة مجانية" ? "#2a1a10" : textColors[i%4];
     ctx.font = "800 34px Tajawal, sans-serif";
-    ctx.fillText(SLICES[i], r-28, 0);
+    ctx.fillText(SLICES[i], flip ? -(r-28) : r-28, 0);
     ctx.restore();
   }
 }
@@ -195,15 +196,19 @@ btn.addEventListener("click", async ()=>{
   const prize = pickPrize();
   const code = prize==="حظ أوفر" ? "------" : makeCode();
   try{
-    await setDoc(doc(db,"spins",`${branch}_${invoice}`),{
-      invoice, branch, prize, code, redeemed:false, createdAt: serverTimestamp()
-    });
+    await Promise.race([
+      setDoc(doc(db,"spins",`${branch}_${invoice}`),{
+        invoice, branch, prize, code, redeemed:false, createdAt: serverTimestamp()
+      }),
+      new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout"}),15000))
+    ]);
   }catch(e){
     btn.disabled=false; btn.textContent="لفّ العجلة";
     msg.className="msg err";
     msg.textContent = (e.code==="permission-denied")
       ? "رقم الفاتورة هذا استُخدم من قبل، أو الرقم غير صحيح."
-      : "تعذّر الاتصال، تأكد من الإنترنت وحاول مرة أخرى.";
+      : "تعذّر الاتصال، حاول مرة أخرى. (" + (e.code||e.message||"error") + ")";
+    console.error(e);
     return;
   }
   btn.textContent = "تدور... 🎡";

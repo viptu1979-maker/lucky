@@ -83,23 +83,23 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, query, where, getDocs, doc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { initializeFirestore, collection, query, where, getDocs, doc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ================== الإعدادات (نفس إعدادات index.html) ================== */
 const firebaseConfig = {
-  apiKey: "ضع_هنا",
-  authDomain: "ضع_هنا",
-  projectId: "ضع_هنا",
-  storageBucket: "ضع_هنا",
-  messagingSenderId: "ضع_هنا",
-  appId: "ضع_هنا"
+  apiKey: "AIzaSyAvnirj7TYlefFcEMTI5n-4W29ZlFu8nMQ",
+  authDomain: "yanbu-coffee.firebaseapp.com",
+  projectId: "yanbu-coffee",
+  storageBucket: "yanbu-coffee.firebasestorage.app",
+  messagingSenderId: "492676625143",
+  appId: "1:492676625143:web:eac147af4db7d1caa959f2"
 };
 const VALID_DAYS = 7;
 /* ======================================================================= */
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 const $ = id => document.getElementById(id);
 const fmt = d => d.toLocaleString("ar-SA-u-ca-gregory",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
 const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
