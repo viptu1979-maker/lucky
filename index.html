@@ -68,6 +68,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
 import { initializeFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ================== الإعدادات (عدّلها) ================== */
@@ -96,6 +97,7 @@ const SLICES = ["خصم 10%","حظ أوفر","خصم 15%","خصم 10%","فاتو
 /* ======================================================= */
 
 const app = initializeApp(firebaseConfig);
+initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider("6LdFTPgtAAAAAKo0zY1MTYev1LcXr-VTfSJFuwjQ"), isTokenAutoRefreshEnabled: true });
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
 const params = new URLSearchParams(location.search);
