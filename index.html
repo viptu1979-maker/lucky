@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>باركود الحظ</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1c120d; --card:#2a1c14; --line:#4a3426;
+    --cream:#f5e9da; --muted:#c9b29a; --gold:#e0a84a; --gold2:#f3c56b;
+    --c1:#6b3f26; --c2:#a0623a; --c3:#d9a066; --c4:#3e2418;
+    --ok:#5fbf7a; --err:#e06a5a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Tajawal',sans-serif;background:radial-gradient(circle at 50% 0%,#3a2519 0%,var(--bg) 60%);color:var(--cream);min-height:100vh;display:flex;justify-content:center;padding:24px 16px 40px}
+  .wrap{width:100%;max-width:420px;text-align:center}
+  .brand{font-size:15px;color:var(--muted);letter-spacing:.5px}
+  h1{font-size:30px;font-weight:800;margin:4px 0 6px;color:var(--gold2)}
+  .sub{color:var(--muted);font-size:15px;margin-bottom:22px}
+  .wheel-box{position:relative;width:min(340px,86vw);height:min(340px,86vw);margin:0 auto 22px}
+  .pointer{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:16px solid transparent;border-right:16px solid transparent;border-top:30px solid var(--gold2);filter:drop-shadow(0 3px 4px rgba(0,0,0,.5));z-index:3}
+  canvas{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 8px var(--c4),0 0 0 11px var(--gold),0 12px 40px rgba(0,0,0,.6);transition:transform 5.5s cubic-bezier(.12,.75,.12,1)}
+  .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;background:var(--c4);border:4px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:24px;z-index:2}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+  label{display:block;text-align:right;font-size:15px;margin-bottom:8px;color:var(--muted)}
+  input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#1a110c;color:var(--cream);font-size:22px;text-align:center;font-family:inherit;letter-spacing:2px}
+  input:focus{outline:none;border-color:var(--gold)}
+  button{width:100%;margin-top:14px;padding:15px;border:none;border-radius:12px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#2a1a10;font-size:19px;font-weight:800;font-family:inherit;cursor:pointer}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .msg{margin-top:12px;font-size:15px;min-height:20px}
+  .msg.err{color:var(--err)}
+  .result{display:none}
+  .result.show{display:block;animation:pop .5s ease}
+  @keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+  .prize{font-size:34px;font-weight:800;color:var(--gold2);margin:6px 0 10px}
+  .code{font-size:40px;font-weight:800;letter-spacing:8px;background:#1a110c;border:2px dashed var(--gold);border-radius:14px;padding:12px;margin:10px 0;direction:ltr}
+  .meta{color:var(--muted);font-size:14px;line-height:1.9}
+  .note{margin-top:12px;font-size:14px;color:var(--cream);background:#3a271b;border-radius:10px;padding:10px}
+  .foot{margin-top:18px;font-size:12px;color:#8a7360}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand" id="brandName"></div>
+  <h1>باركود الحظ 🎉</h1>
+  <p class="sub">أدخل رقم فاتورتك ولفّ العجلة</p>
+
+  <div class="wheel-box">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="680" height="680"></canvas>
+    <div class="hub">☕</div>
+  </div>
+
+  <div class="card" id="formCard">
+    <label for="invoice">رقم الفاتورة</label>
+    <input id="invoice" inputmode="numeric" autocomplete="off" placeholder="مثال: 10452" maxlength="12">
+    <button id="spinBtn">لفّ العجلة</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card result" id="resultCard">
+    <div id="resultBody"></div>
+  </div>
+
+  <div class="foot">لفّة واحدة لكل فاتورة · الجائزة صالحة لمدة <span id="validDays"></span> أيام</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ================== الإعدادات (عدّلها) ================== */
+const firebaseConfig = {
+  apiKey: "ضع_هنا",
+  authDomain: "ضع_هنا",
+  projectId: "ضع_هنا",
+  storageBucket: "ضع_هنا",
+  messagingSenderId: "ضع_هنا",
+  appId: "ضع_هنا"
+};
+const BRAND_NAME = "اختصاص القهوة";   // اسم المقهى أعلى الصفحة
+const VALID_DAYS = 7;                 // صلاحية الجائزة بالأيام
+const DEFAULT_BRANCH = "main";        // الفرع الافتراضي إذا لم يُحدد في رابط الباركود (?b=...)
+
+// الجوائز ونسبها (المجموع 100). إذا غيّرت الأسماء غيّرها أيضاً في firestore.rules
+const PRIZES = [
+  { name: "خصم 10%",       weight: 40 },
+  { name: "خصم 15%",       weight: 20 },
+  { name: "خصم 25%",       weight: 8  },
+  { name: "فاتورة مجانية", weight: 2  },
+  { name: "حظ أوفر",       weight: 30 }
+];
+// ترتيب الشرائح كما تظهر على العجلة (للشكل فقط، لا يؤثر على النسب)
+const SLICES = ["خصم 10%","حظ أوفر","خصم 15%","خصم 10%","فاتورة مجانية","حظ أوفر","خصم 25%","خصم 15%"];
+/* ======================================================= */
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const params = new URLSearchParams(location.search);
+const branch = (params.get("b") || DEFAULT_BRANCH).toLowerCase().replace(/[^a-z0-9-]/g,"").slice(0,20) || DEFAULT_BRANCH;
+
+document.getElementById("brandName").textContent = BRAND_NAME;
+document.getElementById("validDays").textContent = VALID_DAYS;
+
+/* ---------- رسم العجلة ---------- */
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const colors = ["#6b3f26","#d9a066","#a0623a","#f5e9da"];
+const textColors = ["#f5e9da","#2a1a10","#f5e9da","#2a1a10"];
+function drawWheel(){
+  const n = SLICES.length, cx = 340, cy = 340, r = 330, seg = 2*Math.PI/n;
+  ctx.clearRect(0,0,680,680);
+  for(let i=0;i<n;i++){
+    const start = -Math.PI/2 + i*seg;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+seg); ctx.closePath();
+    ctx.fillStyle = SLICES[i]==="فاتورة مجانية" ? "#e0a84a" : colors[i%4];
+    ctx.fill(); ctx.strokeStyle="#2a1c14"; ctx.lineWidth=4; ctx.stroke();
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(start+seg/2);
+    ctx.textAlign="right"; ctx.textBaseline="middle";
+    ctx.fillStyle = SLICES[i]==="فاتورة مجانية" ? "#2a1a10" : textColors[i%4];
+    ctx.font = "800 34px Tajawal, sans-serif";
+    ctx.fillText(SLICES[i], r-28, 0);
+    ctx.restore();
+  }
+}
+document.fonts.ready.then(drawWheel); drawWheel();
+
+/* ---------- أدوات ---------- */
+function rand(){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]/4294967296; }
+function pickPrize(){
+  const total = PRIZES.reduce((s,p)=>s+p.weight,0);
+  let x = rand()*total;
+  for(const p of PRIZES){ if((x-=p.weight)<0) return p.name; }
+  return PRIZES[PRIZES.length-1].name;
+}
+function makeCode(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s="";
+  const a=new Uint32Array(6); crypto.getRandomValues(a);
+  for(const v of a) s+=chars[v%chars.length];
+  return s;
+}
+const fmt = d => d.toLocaleDateString("ar-SA-u-ca-gregory",{year:"numeric",month:"long",day:"numeric"});
+
+/* ---------- عرض النتيجة ---------- */
+function showResult(r){
+  const body = document.getElementById("resultBody");
+  if(r.prize==="حظ أوفر"){
+    body.innerHTML = `<div class="prize">حظ أوفر 🙏</div>
+      <div class="meta">شكراً لزيارتك! جرّب حظك مع فاتورتك القادمة.</div>
+      <div class="meta">فاتورة رقم ${r.invoice}</div>`;
+  } else {
+    const exp = new Date(r.at + VALID_DAYS*86400000);
+    body.innerHTML = `<div class="meta">مبروك! ربحت</div>
+      <div class="prize">${r.prize} 🎁</div>
+      <div class="code">${r.code}</div>
+      <div class="meta">فاتورة رقم ${r.invoice}<br>صالح حتى ${fmt(exp)}</div>
+      <div class="note">اعرض هذه الشاشة أو الكود على الكاشير في زيارتك القادمة 📸 يُفضَّل تصويرها</div>`;
+  }
+  document.getElementById("formCard").style.display="none";
+  document.getElementById("resultCard").classList.add("show");
+}
+
+/* ---------- اللف ---------- */
+let rotation = 0;
+function spinTo(prize){
+  return new Promise(res=>{
+    const n = SLICES.length, segDeg = 360/n;
+    const idxs = SLICES.map((s,i)=>s===prize?i:-1).filter(i=>i>=0);
+    const i = idxs[Math.floor(rand()*idxs.length)];
+    const center = (i+0.5)*segDeg;
+    const jitter = (rand()-0.5)*(segDeg-10);
+    const target = 360 - center + jitter;
+    rotation += 360*6 + ((target - (rotation%360)) + 360) % 360;
+    canvas.style.transform = `rotate(${rotation}deg)`;
+    setTimeout(res, 5700);
+  });
+}
+
+const btn = document.getElementById("spinBtn");
+const msg = document.getElementById("msg");
+const input = document.getElementById("invoice");
+input.addEventListener("input",()=>{ input.value = input.value.replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g,""); });
+
+btn.addEventListener("click", async ()=>{
+  msg.className="msg"; msg.textContent="";
+  const invoice = input.value.trim();
+  if(!/^[0-9]{1,12}$/.test(invoice)){ msg.className="msg err"; msg.textContent="اكتب رقم الفاتورة (أرقام فقط)"; return; }
+
+  const saved = JSON.parse(localStorage.getItem("lucky_"+branch+"_"+invoice) || "null");
+  if(saved){ showResult(saved); return; }
+
+  btn.disabled = true; btn.textContent = "لحظة...";
+  const prize = pickPrize();
+  const code = prize==="حظ أوفر" ? "------" : makeCode();
+  try{
+    await setDoc(doc(db,"spins",`${branch}_${invoice}`),{
+      invoice, branch, prize, code, redeemed:false, createdAt: serverTimestamp()
+    });
+  }catch(e){
+    btn.disabled=false; btn.textContent="لفّ العجلة";
+    msg.className="msg err";
+    msg.textContent = (e.code==="permission-denied")
+      ? "رقم الفاتورة هذا استُخدم من قبل، أو الرقم غير صحيح."
+      : "تعذّر الاتصال، تأكد من الإنترنت وحاول مرة أخرى.";
+    return;
+  }
+  btn.textContent = "تدور... 🎡";
+  await spinTo(prize);
+  const r = { invoice, prize, code, at: Date.now() };
+  try{ localStorage.setItem("lucky_"+branch+"_"+invoice, JSON.stringify(r)); }catch(_){}
+  showResult(r);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>باركود الحظ - الكاشير</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#1c120d;--card:#2a1c14;--line:#4a3426;--cream:#f5e9da;--muted:#c9b29a;--gold:#e0a84a;--gold2:#f3c56b;--ok:#5fbf7a;--err:#e06a5a;--warn:#e8b04a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--cream);min-height:100vh;display:flex;justify-content:center;padding:24px 16px}
+  .wrap{width:100%;max-width:440px}
+  h1{font-size:24px;color:var(--gold2);margin-bottom:4px}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .who{font-size:13px;color:var(--muted)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+  label{display:block;font-size:14px;color:var(--muted);margin:10px 0 6px}
+  input{width:100%;padding:13px;border-radius:10px;border:1px solid var(--line);background:#1a110c;color:var(--cream);font-size:18px;font-family:inherit}
+  input.code{text-align:center;font-size:28px;letter-spacing:6px;text-transform:uppercase;direction:ltr}
+  input:focus{outline:none;border-color:var(--gold)}
+  button{width:100%;margin-top:12px;padding:13px;border:none;border-radius:10px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#2a1a10;font-size:17px;font-weight:800;font-family:inherit;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);width:auto;margin:0;padding:6px 12px;font-size:13px;font-weight:500}
+  button.ok{background:var(--ok);color:#0f2a17}
+  button:disabled{opacity:.5}
+  .tabs{display:flex;gap:8px;margin-bottom:6px}
+  .tabs button{margin:0;background:#1a110c;color:var(--muted);border:1px solid var(--line);font-size:14px;padding:9px}
+  .tabs button.on{background:var(--gold);color:#2a1a10}
+  .msg{margin-top:10px;font-size:14px;min-height:18px}
+  .err{color:var(--err)}
+  .res .prize{font-size:30px;font-weight:800;color:var(--gold2);margin:4px 0}
+  .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--line);font-size:15px}
+  .row span:first-child{color:var(--muted)}
+  .badge{display:inline-block;padding:6px 12px;border-radius:20px;font-weight:700;font-size:15px;margin-top:6px}
+  .b-ok{background:rgba(95,191,122,.15);color:var(--ok)}
+  .b-used{background:rgba(224,106,90,.15);color:var(--err)}
+  .b-exp{background:rgba(232,176,74,.15);color:var(--warn)}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- تسجيل الدخول -->
+  <div id="loginView">
+    <h1>صرف جوائز باركود الحظ</h1>
+    <p class="who" style="margin-bottom:16px">دخول الكاشير</p>
+    <div class="card">
+      <label>البريد الإلكتروني</label>
+      <input id="email" type="email" dir="ltr" autocomplete="username">
+      <label>كلمة المرور</label>
+      <input id="pass" type="password" dir="ltr" autocomplete="current-password">
+      <button id="loginBtn">دخول</button>
+      <div class="msg err" id="loginMsg"></div>
+    </div>
+  </div>
+
+  <!-- الصرف -->
+  <div id="mainView" class="hide">
+    <div class="top">
+      <div><h1>صرف الجوائز</h1><div class="who" id="who"></div></div>
+      <button class="ghost" id="logoutBtn">خروج</button>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <button id="tCode" class="on">بالكود</button>
+        <button id="tInv">برقم الفاتورة</button>
+      </div>
+      <div id="codeBox">
+        <input id="code" class="code" maxlength="6" placeholder="XXXXXX" autocomplete="off">
+      </div>
+      <div id="invBox" class="hide">
+        <input id="inv" inputmode="numeric" placeholder="رقم الفاتورة" autocomplete="off">
+      </div>
+      <button id="searchBtn">بحث</button>
+      <div class="msg" id="searchMsg"></div>
+    </div>
+
+    <div id="results"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, query, where, getDocs, doc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ================== الإعدادات (نفس إعدادات index.html) ================== */
+const firebaseConfig = {
+  apiKey: "ضع_هنا",
+  authDomain: "ضع_هنا",
+  projectId: "ضع_هنا",
+  storageBucket: "ضع_هنا",
+  messagingSenderId: "ضع_هنا",
+  appId: "ضع_هنا"
+};
+const VALID_DAYS = 7;
+/* ======================================================================= */
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const $ = id => document.getElementById(id);
+const fmt = d => d.toLocaleString("ar-SA-u-ca-gregory",{year:"numeric",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const esc = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- دخول / خروج ---------- */
+onAuthStateChanged(auth, u=>{
+  $("loginView").classList.toggle("hide", !!u);
+  $("mainView").classList.toggle("hide", !u);
+  if(u) $("who").textContent = u.email;
+});
+$("loginBtn").onclick = async ()=>{
+  $("loginMsg").textContent="";
+  try{ await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value); }
+  catch(e){ $("loginMsg").textContent="البريد أو كلمة المرور غير صحيحة"; }
+};
+$("logoutBtn").onclick = ()=>signOut(auth);
+
+// خروج تلقائي بعد 10 دقائق بدون نشاط
+let idle; const resetIdle=()=>{clearTimeout(idle);idle=setTimeout(()=>{if(auth.currentUser)signOut(auth)},600000)};
+["click","keydown","touchstart"].forEach(e=>addEventListener(e,resetIdle)); resetIdle();
+
+/* ---------- تبويبات ---------- */
+let mode="code";
+$("tCode").onclick=()=>{mode="code";$("tCode").classList.add("on");$("tInv").classList.remove("on");$("codeBox").classList.remove("hide");$("invBox").classList.add("hide")};
+$("tInv").onclick=()=>{mode="inv";$("tInv").classList.add("on");$("tCode").classList.remove("on");$("invBox").classList.remove("hide");$("codeBox").classList.add("hide")};
+$("code").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""));
+$("inv").addEventListener("input",e=>e.target.value=e.target.value.replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g,""));
+
+/* ---------- بحث ---------- */
+$("searchBtn").onclick = async ()=>{
+  const m=$("searchMsg"); m.className="msg"; m.textContent=""; $("results").innerHTML="";
+  let q;
+  if(mode==="code"){
+    const c=$("code").value.trim();
+    if(c.length!==6){ m.className="msg err"; m.textContent="الكود 6 خانات"; return; }
+    q = query(collection(db,"spins"), where("code","==",c));
+  } else {
+    const v=$("inv").value.trim();
+    if(!v){ m.className="msg err"; m.textContent="اكتب رقم الفاتورة"; return; }
+    q = query(collection(db,"spins"), where("invoice","==",v));
+  }
+  try{
+    const snap = await getDocs(q);
+    if(snap.empty){ m.className="msg err"; m.textContent="لا توجد جائزة بهذا الرقم"; return; }
+    snap.forEach(d=>render(d.id,d.data()));
+  }catch(e){
+    m.className="msg err";
+    m.textContent = e.code==="permission-denied" ? "حسابك غير مصرّح له بالصرف. راجع الإدارة." : "تعذّر البحث، حاول مرة أخرى.";
+  }
+};
+
+function render(id, r){
+  const created = r.createdAt?.toDate?.() || new Date();
+  const exp = new Date(created.getTime()+VALID_DAYS*86400000);
+  const expired = Date.now() > exp.getTime();
+  const lose = r.prize==="حظ أوفر";
+  let badge;
+  if(lose) badge=`<span class="badge b-used">لا توجد جائزة (حظ أوفر)</span>`;
+  else if(r.redeemed) badge=`<span class="badge b-used">صُرفت من قبل${r.redeemedAt?.toDate? " · "+fmt(r.redeemedAt.toDate()):""}</span>`;
+  else if(expired) badge=`<span class="badge b-exp">منتهية الصلاحية</span>`;
+  else badge=`<span class="badge b-ok">صالحة للصرف ✓</span>`;
+
+  const el=document.createElement("div"); el.className="card res";
+  el.innerHTML=`
+    <div class="prize">${esc(r.prize)}</div>${badge}
+    <div style="margin-top:12px">
+      <div class="row"><span>الكود</span><span dir="ltr">${esc(r.code)}</span></div>
+      <div class="row"><span>فاتورة الربح</span><span>${esc(r.invoice)}</span></div>
+      <div class="row"><span>الفرع</span><span>${esc(r.branch)}</span></div>
+      <div class="row"><span>تاريخ الربح</span><span>${fmt(created)}</span></div>
+      <div class="row"><span>صالحة حتى</span><span>${fmt(exp)}</span></div>
+      ${r.redeemedBy?`<div class="row"><span>صرفها</span><span>${esc(r.redeemedBy)}</span></div>`:""}
+    </div>
+    ${(!lose && !r.redeemed && !expired)?`<button class="ok">تأكيد صرف الجائزة</button>`:""}
+    <div class="msg"></div>`;
+  const b=el.querySelector("button.ok");
+  if(b) b.onclick=async ()=>{
+    if(!confirm(`تأكيد صرف "${r.prize}" للفاتورة ${r.invoice}؟`)) return;
+    b.disabled=true;
+    const msg=el.querySelector(".msg");
+    try{
+      await runTransaction(db, async tx=>{
+        const ref=doc(db,"spins",id); const s=await tx.get(ref);
+        if(s.data().redeemed) throw new Error("used");
+        tx.update(ref,{redeemed:true, redeemedAt:serverTimestamp(), redeemedBy:auth.currentUser.email});
+      });
+      b.remove();
+      el.querySelector(".badge").outerHTML=`<span class="badge b-used">تم الصرف الآن ✓</span>`;
+    }catch(e){
+      b.disabled=false; msg.className="msg err";
+      msg.textContent = e.message==="used" ? "صُرفت هذه الجائزة للتو من جهاز آخر." : "تعذّر الصرف، حاول مرة أخرى.";
+    }
+  };
+  $("results").appendChild(el);
+}
+</script>
+</body>
+</html>
