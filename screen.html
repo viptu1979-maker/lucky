@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>باركود الحظ - الشاشة</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root{--bg:#1c120d;--card:#2a1c14;--line:#4a3426;--cream:#f5e9da;--muted:#c9b29a;--gold:#e0a84a;--gold2:#f3c56b;--c4:#3e2418;--err:#e06a5a}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -29,10 +28,10 @@
   .brand{font-size:2.2vw;color:var(--muted)}
   .title{white-space:nowrap;font-size:4vw;font-weight:800;color:var(--gold2);line-height:1.15;margin:.4vh 0 1.2vh}
   .sub{font-size:1.9vw;color:var(--cream);margin-bottom:3vh}
-  .qrbox{background:#fff;border-radius:2vw;padding:1.6vw;display:inline-block;box-shadow:0 0 0 .5vw var(--gold)}
-  .qrbox img,.qrbox canvas{display:block;width:min(20vw,34vh)!important;height:min(20vw,34vh)!important}
-  .steps{font-size:1.6vw;color:var(--muted);margin-top:3vh;line-height:1.9}
-  .wheel-box{position:relative;width:min(80vh,52vw);height:min(80vh,52vw);flex:0 0 auto}
+  .steps{white-space:nowrap;font-size:2.1vw;color:var(--cream);margin-top:4vh;line-height:2;text-align:right;display:inline-block}
+  .prizes{margin-top:5vh;font-size:1.9vw;color:var(--muted);line-height:1.8;border-top:1px solid var(--line);padding-top:3vh}
+  .prizes b{color:var(--gold2);font-size:2.6vw}
+  .wheel-box{position:relative;width:min(86vh,56vw);height:min(86vh,56vw);flex:0 0 auto}
   .pointer{position:absolute;top:-1.5%;left:50%;transform:translateX(-50%);width:0;height:0;border-left:3.2vh solid transparent;border-right:3.2vh solid transparent;border-top:6vh solid var(--gold2);filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));z-index:3}
   #wheel{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 1.4vh var(--c4),0 0 0 2vh var(--gold),0 2vh 6vh rgba(0,0,0,.6);transition:transform 5.5s cubic-bezier(.12,.75,.12,1)}
   .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15%;height:15%;border-radius:50%;background:var(--c4);border:.8vh solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:5vh;z-index:2}
@@ -56,7 +55,7 @@
     #screenView{flex-direction:column;gap:3vh}
     .side{width:90vw}
     .title{font-size:8vw}.sub{font-size:4vw}.brand{font-size:4vw}.steps{font-size:3.4vw}
-    .qrbox img,.qrbox canvas{width:20vh!important;height:20vh!important}
+    .prizes{font-size:3.6vw}.prizes b{font-size:4.6vw}
     .wheel-box{width:min(86vw,46vh);height:min(86vw,46vh)}
     .res-top{font-size:6vw}.res-prize{font-size:15vw}.res-inv{font-size:4.5vw}
   }
@@ -81,9 +80,9 @@
   <div class="side">
     <div class="brand" id="brandName"></div>
     <div class="title">باركود الحظ 🎉</div>
-    <div class="sub">امسح الباركود ولفّ العجلة</div>
-    <div class="qrbox" id="qr"></div>
-    <div class="steps">اكتب رقم فاتورتك · لفّ العجلة · اربح خصماً أو فاتورة مجانية</div>
+    <div class="sub">لفّ من جوالك وشوف حظك هنا</div>
+    <div class="steps">١. امسح باركود الكاونتر بجوالك<br>٢. اكتب رقم فاتورتك<br>٣. تابع حظك هنا 👀</div>
+    <div class="prizes">خصومات حتى 25%<br><b>فاتورة مجانية 🎁</b></div>
   </div>
   <div class="wheel-box">
     <div class="pointer"></div>
@@ -136,7 +135,6 @@ const branch = (params.get("b")||"").toLowerCase().replace(/[^a-z0-9-]/g,"").sli
 if(params.get("e")) $("email").value = params.get("e");
 
 $("brandName").textContent = BRAND_NAME;
-new QRCode($("qr"), { text: branch ? BASE_URL+"?b="+branch : BASE_URL, width:600, height:600, colorDark:"#2a1a10", colorLight:"#ffffff", correctLevel: QRCode.CorrectLevel.M });
 
 /* ---------- رسم العجلة ---------- */
 const canvas = $("wheel"), ctx = canvas.getContext("2d");
