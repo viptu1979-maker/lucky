@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>باركود الحظ - الشاشة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{--bg:#1c120d;--card:#2a1c14;--line:#4a3426;--cream:#f5e9da;--muted:#c9b29a;--gold:#e0a84a;--gold2:#f3c56b;--c4:#3e2418;--err:#e06a5a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:'Tajawal',sans-serif;background:radial-gradient(circle at 30% 20%,#3a2519 0%,var(--bg) 65%);color:var(--cream)}
+  .hide{display:none!important}
+
+  /* تسجيل الدخول */
+  #loginView{height:100%;display:flex;align-items:center;justify-content:center;padding:16px}
+  .login{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
+  .login h1{color:var(--gold2);font-size:26px;margin-bottom:6px}
+  .login p{color:var(--muted);font-size:15px;margin-bottom:14px}
+  .login label{display:block;font-size:14px;color:var(--muted);margin:10px 0 6px}
+  .login input{width:100%;padding:13px;border-radius:10px;border:1px solid var(--line);background:#1a110c;color:var(--cream);font-size:18px;font-family:inherit}
+  .login button{width:100%;margin-top:16px;padding:14px;border:none;border-radius:10px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:#2a1a10;font-size:18px;font-weight:800;font-family:inherit;cursor:pointer}
+  .err{color:var(--err);font-size:14px;margin-top:10px;min-height:18px}
+
+  /* الشاشة */
+  #screenView{height:100%;display:flex;align-items:center;justify-content:center;gap:6vw;padding:4vh 5vw}
+  .side{flex:0 0 auto;width:min(34vw,520px);text-align:center}
+  .brand{font-size:2.2vw;color:var(--muted)}
+  .title{white-space:nowrap;font-size:4vw;font-weight:800;color:var(--gold2);line-height:1.15;margin:.4vh 0 1.2vh}
+  .sub{font-size:1.9vw;color:var(--cream);margin-bottom:3vh}
+  .qrbox{background:#fff;border-radius:2vw;padding:1.6vw;display:inline-block;box-shadow:0 0 0 .5vw var(--gold)}
+  .qrbox img,.qrbox canvas{display:block;width:min(20vw,34vh)!important;height:min(20vw,34vh)!important}
+  .steps{font-size:1.6vw;color:var(--muted);margin-top:3vh;line-height:1.9}
+  .wheel-box{position:relative;width:min(80vh,52vw);height:min(80vh,52vw);flex:0 0 auto}
+  .pointer{position:absolute;top:-1.5%;left:50%;transform:translateX(-50%);width:0;height:0;border-left:3.2vh solid transparent;border-right:3.2vh solid transparent;border-top:6vh solid var(--gold2);filter:drop-shadow(0 4px 6px rgba(0,0,0,.5));z-index:3}
+  #wheel{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 1.4vh var(--c4),0 0 0 2vh var(--gold),0 2vh 6vh rgba(0,0,0,.6);transition:transform 5.5s cubic-bezier(.12,.75,.12,1)}
+  .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:15%;height:15%;border-radius:50%;background:var(--c4);border:.8vh solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:5vh;z-index:2}
+
+  /* النتيجة */
+  #result{position:fixed;inset:0;background:rgba(20,12,8,.82);display:flex;align-items:center;justify-content:center;z-index:10;opacity:0;pointer-events:none;transition:opacity .4s}
+  #result.show{opacity:1}
+  .res-card{text-align:center;transform:scale(.8);transition:transform .5s cubic-bezier(.2,1.6,.4,1)}
+  #result.show .res-card{transform:scale(1)}
+  .res-top{font-size:3.4vw;color:var(--cream)}
+  .res-prize{font-size:9vw;font-weight:800;color:var(--gold2);line-height:1.1;margin:1vh 0;text-shadow:0 0 4vw rgba(243,197,107,.35)}
+  .res-inv{font-size:2.4vw;color:var(--muted)}
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:11}
+
+  .status{position:fixed;bottom:1.2vh;left:1.2vw;font-size:1.1vw;color:#8a7360;display:flex;align-items:center;gap:.5vw}
+  .dot{width:1vw;height:1vw;max-width:12px;max-height:12px;border-radius:50%;background:#5fbf7a}
+  .dot.off{background:var(--err)}
+  .logout{position:fixed;bottom:1vh;right:1vw;background:transparent;border:1px solid var(--line);color:#8a7360;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer;opacity:.35}
+
+  @media (orientation:portrait){
+    #screenView{flex-direction:column;gap:3vh}
+    .side{width:90vw}
+    .title{font-size:8vw}.sub{font-size:4vw}.brand{font-size:4vw}.steps{font-size:3.4vw}
+    .qrbox img,.qrbox canvas{width:20vh!important;height:20vh!important}
+    .wheel-box{width:min(86vw,46vh);height:min(86vw,46vh)}
+    .res-top{font-size:6vw}.res-prize{font-size:15vw}.res-inv{font-size:4.5vw}
+  }
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="login">
+    <h1>شاشة باركود الحظ</h1>
+    <p>سجّل الدخول بحساب الشاشة مرة واحدة فقط، وبعدها تبقى الشاشة مفتوحة دائماً.</p>
+    <label>البريد الإلكتروني</label>
+    <input id="email" type="email" dir="ltr" autocomplete="username">
+    <label>كلمة المرور</label>
+    <input id="pass" type="password" dir="ltr" autocomplete="current-password">
+    <button id="loginBtn">دخول</button>
+    <div class="err" id="loginMsg"></div>
+  </div>
+</div>
+
+<div id="screenView" class="hide">
+  <div class="side">
+    <div class="brand" id="brandName"></div>
+    <div class="title">باركود الحظ 🎉</div>
+    <div class="sub">امسح الباركود ولفّ العجلة</div>
+    <div class="qrbox" id="qr"></div>
+    <div class="steps">اكتب رقم فاتورتك · لفّ العجلة · اربح خصماً أو فاتورة مجانية</div>
+  </div>
+  <div class="wheel-box">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="1000" height="1000"></canvas>
+    <div class="hub">☕</div>
+  </div>
+</div>
+
+<div id="result"><div class="res-card">
+  <div class="res-top" id="resTop"></div>
+  <div class="res-prize" id="resPrize"></div>
+  <div class="res-inv" id="resInv"></div>
+</div></div>
+<canvas id="confetti"></canvas>
+
+<div class="status hide" id="status"><span class="dot" id="dot"></span><span id="statusText">متصل</span></div>
+<button class="logout hide" id="logoutBtn">خروج</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, collection, query, where, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ================== الإعدادات ================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyAvnirj7TYlefFcEMTI5n-4W29ZlFu8nMQ",
+  authDomain: "yanbu-coffee.firebaseapp.com",
+  projectId: "yanbu-coffee",
+  storageBucket: "yanbu-coffee.firebasestorage.app",
+  messagingSenderId: "492676625143",
+  appId: "1:492676625143:web:eac147af4db7d1caa959f2"
+};
+const BRAND_NAME = "اختصاص القهوة";
+const BASE_URL = "https://viptu1979-maker.github.io/lucky/";
+const RESULT_SECONDS = 8;   // مدة عرض النتيجة على الشاشة
+// نفس ترتيب الشرائح في index.html
+const SLICES = ["خصم 10%","حظ أوفر","خصم 15%","خصم 10%","فاتورة مجانية","حظ أوفر","خصم 25%","خصم 15%"];
+/* =============================================== */
+
+const app = initializeApp(firebaseConfig);
+initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider("6LdFTPgtAAAAAKo0zY1MTYev1LcXr-VTfSJFuwjQ"), isTokenAutoRefreshEnabled: true });
+const auth = getAuth(app);
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const $ = id => document.getElementById(id);
+
+// الفرع من الرابط: screen.html?b=umlej  (بدون ?b تعرض كل الفروع)
+const params = new URLSearchParams(location.search);
+const branch = (params.get("b")||"").toLowerCase().replace(/[^a-z0-9-]/g,"").slice(0,20);
+if(params.get("e")) $("email").value = params.get("e");
+
+$("brandName").textContent = BRAND_NAME;
+new QRCode($("qr"), { text: branch ? BASE_URL+"?b="+branch : BASE_URL, width:600, height:600, colorDark:"#2a1a10", colorLight:"#ffffff", correctLevel: QRCode.CorrectLevel.M });
+
+/* ---------- رسم العجلة ---------- */
+const canvas = $("wheel"), ctx = canvas.getContext("2d");
+const colors = ["#6b3f26","#d9a066","#a0623a","#f5e9da"], textColors = ["#f5e9da","#2a1a10","#f5e9da","#2a1a10"];
+function drawWheel(){
+  const n=SLICES.length, cx=500, cy=500, r=490, seg=2*Math.PI/n;
+  ctx.clearRect(0,0,1000,1000);
+  for(let i=0;i<n;i++){
+    const start=-Math.PI/2+i*seg, free=SLICES[i]==="فاتورة مجانية";
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+seg); ctx.closePath();
+    ctx.fillStyle = free ? "#e0a84a" : colors[i%4]; ctx.fill();
+    ctx.strokeStyle="#2a1c14"; ctx.lineWidth=6; ctx.stroke();
+    const mid=start+seg/2, flip=Math.cos(mid)<0;
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(flip?mid+Math.PI:mid);
+    ctx.textAlign=flip?"left":"right"; ctx.textBaseline="middle";
+    ctx.fillStyle = free ? "#2a1a10" : textColors[i%4];
+    ctx.font="800 50px Tajawal, sans-serif";
+    ctx.fillText(SLICES[i], flip?-(r-40):r-40, 0);
+    ctx.restore();
+  }
+}
+document.fonts.ready.then(drawWheel); drawWheel();
+
+function rand(){ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]/4294967296; }
+let rotation = 0;
+function spinTo(prize){
+  return new Promise(res=>{
+    const n=SLICES.length, segDeg=360/n;
+    let idxs=SLICES.map((s,i)=>s===prize?i:-1).filter(i=>i>=0);
+    if(!idxs.length) idxs=[0];
+    const i=idxs[Math.floor(rand()*idxs.length)];
+    const target = 360-(i+0.5)*segDeg + (rand()-0.5)*(segDeg-10);
+    rotation += 360*6 + ((target-(rotation%360))+360)%360;
+    canvas.style.transform=`rotate(${rotation}deg)`;
+    setTimeout(res, 5700);
+  });
+}
+
+/* ---------- احتفال ---------- */
+const cf=$("confetti"), cx2=cf.getContext("2d");
+function confetti(){
+  cf.width=innerWidth; cf.height=innerHeight;
+  const cols=["#f3c56b","#e0a84a","#f5e9da","#d9a066","#5fbf7a"];
+  const parts=Array.from({length:180},()=>({x:rand()*cf.width,y:-rand()*cf.height*0.5,w:6+rand()*8,h:10+rand()*10,vy:2+rand()*4,vx:-2+rand()*4,r:rand()*6,vr:-.2+rand()*.4,c:cols[Math.floor(rand()*cols.length)]}));
+  const end=Date.now()+4500;
+  (function frame(){
+    cx2.clearRect(0,0,cf.width,cf.height);
+    parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;cx2.save();cx2.translate(p.x,p.y);cx2.rotate(p.r);cx2.fillStyle=p.c;cx2.fillRect(-p.w/2,-p.h/2,p.w,p.h);cx2.restore();});
+    if(Date.now()<end) requestAnimationFrame(frame); else cx2.clearRect(0,0,cf.width,cf.height);
+  })();
+}
+
+/* ---------- قائمة الانتظار ---------- */
+const queue=[]; let busy=false;
+async function runQueue(){
+  if(busy) return; busy=true;
+  while(queue.length){
+    const s=queue.shift();
+    await spinTo(s.prize);
+    const lose = s.prize==="حظ أوفر";
+    $("resTop").textContent = lose ? "هالمرة" : "مبروك! 🎉";
+    $("resPrize").textContent = lose ? "حظ أوفر 🙏" : s.prize+" 🎁";
+    $("resInv").textContent = (lose ? "جرّب حظك مع فاتورتك القادمة · " : "") + "فاتورة رقم \u2066***" + String(s.invoice||"").slice(-3) + "\u2069";
+    $("result").classList.add("show");
+    if(!lose) confetti();
+    await new Promise(r=>setTimeout(r, RESULT_SECONDS*1000));
+    $("result").classList.remove("show");
+    await new Promise(r=>setTimeout(r, 600));
+  }
+  busy=false;
+}
+
+/* ---------- الاستماع المباشر ---------- */
+let unsub=null;
+function setStatus(ok,text){ $("dot").classList.toggle("off",!ok); $("statusText").textContent=text; }
+function listen(){
+  if(unsub) unsub();
+  // نافذة 30 دقيقة لتفادي فرق الساعة في الشاشة؛ اللفّات القديمة تُتجاهل عند أول تحميل
+  const since = Timestamp.fromMillis(Date.now()-30*60*1000);
+  const q = query(collection(db,"spins"), where("createdAt",">",since));
+  let first=true; const seen=new Set();
+  unsub = onSnapshot(q, snap=>{
+    setStatus(true, "متصل" + (branch ? " · فرع "+branch : " · كل الفروع"));
+    snap.docChanges().forEach(ch=>{
+      if(ch.type!=="added" || seen.has(ch.doc.id)) return;
+      seen.add(ch.doc.id);
+      if(first) return;
+      const d=ch.doc.data();
+      if(branch && d.branch!==branch) return;
+      queue.push(d);
+    });
+    first=false; runQueue();
+  }, err=>{
+    console.error(err);
+    setStatus(false, err.code==="permission-denied" ? "الحساب غير مصرّح كشاشة" : "انقطع الاتصال، إعادة المحاولة...");
+    setTimeout(()=>{ if(auth.currentUser) listen(); }, 10000);
+  });
+}
+
+/* ---------- دخول / خروج ---------- */
+onAuthStateChanged(auth, u=>{
+  $("loginView").classList.toggle("hide", !!u);
+  $("screenView").classList.toggle("hide", !u);
+  $("status").classList.toggle("hide", !u);
+  $("logoutBtn").classList.toggle("hide", !u);
+  if(u){ listen(); keepAwake(); } else if(unsub){ unsub(); unsub=null; }
+});
+$("loginBtn").onclick = async ()=>{
+  $("loginMsg").textContent="";
+  try{ await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value); }
+  catch(e){ $("loginMsg").textContent="البريد أو كلمة المرور غير صحيحة"; }
+};
+$("logoutBtn").onclick = ()=>{ if(confirm("تسجيل خروج الشاشة؟")) signOut(auth); };
+
+/* ---------- إبقاء الشاشة مضاءة + ملء الشاشة ---------- */
+let lock=null;
+async function keepAwake(){ try{ lock = await navigator.wakeLock?.request("screen"); }catch(_){} }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && auth.currentUser) keepAwake(); });
+$("screenView").addEventListener("click",()=>{ try{ document.documentElement.requestFullscreen?.(); }catch(_){} });
+
+// تحديث تلقائي للصفحة كل يوم الساعة 5 فجراً (ينظف الذاكرة في أجهزة التلفزيون)
+setInterval(()=>{ const d=new Date(); if(d.getHours()===5 && d.getMinutes()===0 && !busy) location.reload(); }, 60000);
+</script>
+</body>
+</html>
